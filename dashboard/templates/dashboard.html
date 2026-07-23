@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Honeypot Threat Intel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060a10;
+    --panel: rgba(0, 1, 1, 0.1);
+    --border: #00e5a0;
+    --accent: #00e5a0;
+    --accent2: #00b8ff;
+    --danger: #ff4d6d;
+    --text: #d4e0ec;
+    --muted: #6b7a8a;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 40px 60px;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  #matrix-bg {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  .content {
+    position: relative;
+    z-index: 1;
+  }
+
+  .header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(0, 229, 160, 0.25);
+    padding-bottom: 18px;
+    margin-bottom: 30px;
+  }
+
+  .header h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.7em;
+    letter-spacing: -0.5px;
+    margin: 0;
+    color: #eef4f9;
+    text-shadow: 0 0 12px rgba(0, 229, 160, 0.3);
+  }
+  .header h1 span { color: var(--accent); }
+
+  .tagline {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8em;
+    color: var(--muted);
+  }
+
+  .stats { display: flex; gap: 18px; margin-bottom: 30px; }
+
+  .card, .section {
+    background: var(--panel);
+    backdrop-filter: blur(1px) saturate(1%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid rgba(0, 229, 160, 0.35);
+    border-radius: 12px;
+    box-shadow:
+      0 0 0 1px rgba(0, 229, 160, 0.08),
+      0 0 24px rgba(0, 229, 160, 0.12),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+  }
+
+  .card:hover, .section:hover {
+    border-color: rgba(0, 229, 160, 0.7);
+    box-shadow:
+      0 0 0 1px rgba(0, 229, 160, 0.15),
+      0 0 34px rgba(0, 229, 160, 0.25),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+
+  .card {
+    padding: 22px 26px;
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; height: 2px; width: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), transparent);
+  }
+  .card h2 {
+    font-family: 'JetBrains Mono', monospace;
+    margin: 0;
+    font-size: 2.3em;
+    color: var(--accent);
+    text-shadow: 0 0 16px rgba(0, 229, 160, 0.5);
+  }
+  .card p { margin: 6px 0 0; color: var(--muted); font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .section {
+    padding: 24px 28px;
+    margin-top: 20px;
+  }
+  .section h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent);
+    margin: 0 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-shadow: 0 0 10px rgba(0, 229, 160, 0.4);
+  }
+  .section h3::before { content: "›"; color: var(--accent2); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.92em; }
+  th {
+    text-align: left;
+    padding: 10px 12px;
+    color: var(--accent2);
+    font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8em;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(0, 229, 160, 0.25);
+  }
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  tr:hover td { background: rgba(0, 229, 160, 0.06); }
+
+  .success { color: var(--accent); font-weight: 600; text-shadow: 0 0 8px rgba(0,229,160,0.5); }
+  .failed { color: var(--danger); font-weight: 600; text-shadow: 0 0 8px rgba(255,77,109,0.5); }
+
+  footer {
+    margin-top: 40px;
+    color: var(--muted);
+    font-size: 0.8em;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="matrix-bg"></canvas>
+
+<div class="content">
+
+<div class="header">
+  <div>
+    <h1>svr04<span>::</span>threat-intel</h1>
+    <div class="tagline">cowrie ssh/telnet sensor — live capture analysis</div>
+  </div>
+  <div class="tagline">status: <span style="color:var(--accent)">● active</span></div>
+</div>
+
+<div class="stats">
+  <div class="card"><h2>{{ data.total_sessions }}</h2><p>Total Sessions</p></div>
+  <div class="card"><h2>{{ data.top_usernames|length }}</h2><p>Unique Usernames</p></div>
+  <div class="card"><h2>{{ data.downloads|length }}</h2><p>Payload Fetch Attempts</p></div>
+</div>
+
+<div class="section">
+  <h3>Top Attempted Usernames</h3>
+  <table>
+    <tr><th>Username</th><th>Attempts</th></tr>
+    {% for u, c in data.top_usernames %}
+    <tr><td>{{ u }}</td><td>{{ c }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="section">
+  <h3>Top Attempted Passwords</h3>
+  <table>
+    <tr><th>Password</th><th>Attempts</th></tr>
+    {% for p, c in data.top_passwords %}
+    <tr><td>{{ p }}</td><td>{{ c }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="section">
+  <h3>Top Username/Password Combinations</h3>
+  <table>
+    <tr><th>Combo</th><th>Attempts</th></tr>
+    {% for combo, c in data.top_combos %}
+    <tr><td>{{ combo }}</td><td>{{ c }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="section">
+  <h3>Recent Login Attempts</h3>
+  <table>
+    <tr><th>Timestamp</th><th>Source IP</th><th>Username</th><th>Password</th><th>Result</th></tr>
+    {% for e in data.login_events %}
+    <tr>
+      <td>{{ e.timestamp }}</td>
+      <td>{{ e.src_ip }}</td>
+      <td>{{ e.username }}</td>
+      <td>{{ e.password }}</td>
+      <td class="{{ 'success' if e.success else 'failed' }}">{{ 'SUCCESS' if e.success else 'FAILED' }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="section">
+  <h3>Payload Fetch Attempts</h3>
+  <table>
+    <tr><th>URL</th></tr>
+    {% for url in data.downloads %}
+    <tr><td>{{ url }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<footer>svr04 threat sensor · deployed &amp; monitored by S&amp;S</footer>
+
+</div>
+
+<script>
+const canvas = document.getElementById('matrix-bg');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = Math.max(document.body.scrollHeight, window.innerHeight);
+}
+resize();
+window.addEventListener('resize', resize);
+
+const chars = "アイウエオカキクケコサシスセソタチツテト0123456789ABCDEF$#@%&";
+const fontSize = 16;
+let columns = Math.floor(canvas.width / fontSize);
+let drops = Array(columns).fill(1);
+
+function draw() {
+  ctx.fillStyle = "rgba(6, 10, 16, 0.08)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "#00e5a0";
+  ctx.font = fontSize + "px monospace";
+
+  for (let i = 0; i < drops.length; i++) {
+    const char = chars[Math.floor(Math.random() * chars.length)];
+    ctx.fillText(char, i * fontSize, drops[i] * fontSize);
+
+    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+      drops[i] = 0;
+    }
+    drops[i]++;
+  }
+}
+
+setInterval(draw, 50);
+</script>
+
+</body>
+</html>
